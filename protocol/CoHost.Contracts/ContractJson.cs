@@ -14,6 +14,8 @@ public static partial class ContractJson
     /// <summary>
     /// camelCase names, snake_case enum strings (integers rejected), strict numbers,
     /// discriminator may appear anywhere in the object, null is always written.
+    /// Missing constructor parameters and null in non-nullable members are rejected
+    /// (also when serializing).
     /// </summary>
     public static JsonSerializerOptions Options { get; } = CreateOptions();
 
@@ -24,6 +26,14 @@ public static partial class ContractJson
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             NumberHandling = JsonNumberHandling.Strict,
             AllowOutOfOrderMetadataProperties = true,
+            // CR-01: reject a missing constructor parameter and null in a non-nullable member with
+            // JsonException. Before this, a missing installKind silently became msi and a null payload
+            // passed. The same checks apply when serializing non-null members.
+            // v0.1 is unreleased, so tightening the receiver here is not a compatibility change.
+            // A field added in a MINOR version must be a constructor parameter with a default value,
+            // otherwise it becomes required (PROTOCOL.md section 2).
+            RespectRequiredConstructorParameters = true,
+            RespectNullableAnnotations = true,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: false) },
         };
         options.MakeReadOnly(populateMissingResolver: true);
@@ -39,6 +49,11 @@ public static partial class ContractJson
     /// (<c>"&lt;missing&gt;"</c> when there is no <c>type</c>); <c>(null, null)</c> for JSON <c>null</c>.
     /// The payload is never included in exceptions or results (it may hold secrets).
     /// </returns>
+    /// <exception cref="JsonException">
+    /// Malformed JSON, a missing required field (including a missing or null payload), null in a
+    /// non-nullable field, or an unknown or integer enum value. The message names the property and
+    /// the JSON path, never the value.
+    /// </exception>
     /// <exception cref="InvalidDataException">Input exceeds <see cref="MaxMessageBytes"/>.</exception>
     public static (T? Message, string? UnknownType) Parse<T>(ReadOnlySpan<byte> utf8) where T : Envelope
     {

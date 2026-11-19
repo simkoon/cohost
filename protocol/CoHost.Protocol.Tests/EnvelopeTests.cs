@@ -157,4 +157,87 @@ public sealed class EnvelopeTests
 
         Assert.Equal("hello", doc.RootElement.GetProperty("type").GetString());
     }
+
+    public static TheoryData<string, string> InvalidAgentHelloPayloads() => new()
+    {
+        { "empty payload object", "{}" },
+        { "null payload", "null" },
+        {
+            "installKind missing",
+            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0"}"""
+        },
+        {
+            "agentSecret null",
+            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":null,"protocolVersion":"0.1","appVersion":"0.1.0","installKind":"dev"}"""
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidAgentHelloPayloads))]
+    public void Invalid_agent_hello_is_a_parse_failure(string caseName, string payload)
+    {
+        var json = Utf8($$$"""{"type":"hello","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z","payload":{{{payload}}}}""");
+
+        Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<AgentMessage>(json));
+        Assert.False(string.IsNullOrEmpty(caseName));
+    }
+
+    [Fact]
+    public void Parse_failure_message_has_no_secret()
+    {
+        var json = Utf8($$$"""
+            {"type":"hello","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z",
+             "payload":{"deviceId":"{{{IdText}}}","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0"}}
+            """);
+
+        var ex = Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<AgentMessage>(json));
+
+        Assert.DoesNotContain("example-agent-secret", ex.Message);
+        Assert.DoesNotContain("example-agent-secret", ex.InnerException?.Message ?? string.Empty);
+        Assert.Contains("installKind", ex.Message);
+    }
+
+    [Fact]
+    public void Client_hello_without_installKind_is_a_parse_failure()
+    {
+        var json = Utf8($$$"""
+            {"type":"hello","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z",
+             "payload":{"accessToken":"example.access.token","protocolVersion":"0.1","appVersion":"0.1.0"}}
+            """);
+
+        Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<ClientMessage>(json));
+    }
+
+    [Fact]
+    public void Nullable_field_key_must_be_present()
+    {
+        var withoutKey = Utf8($$$"""
+            {"type":"heartbeat","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z",
+             "payload":{"cpuPercent":1.5,"memoryPercent":2.5,"idleSeconds":7}}
+            """);
+        var withNull = Utf8($$$"""
+            {"type":"heartbeat","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z",
+             "payload":{"cpuPercent":1.5,"memoryPercent":2.5,"consoleUser":null,"idleSeconds":7}}
+            """);
+
+        Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<AgentMessage>(withoutKey));
+
+        var (message, unknown) = ContractJson.Parse<AgentMessage>(withNull);
+        Assert.Null(unknown);
+        var heartbeat = Assert.IsType<AgentHeartbeat>(message);
+        Assert.Null(heartbeat.Payload.ConsoleUser);
+    }
+
+    [Fact]
+    public void Serialize_rejects_null_in_non_nullable_member()
+    {
+        var hello = new AgentHello
+        {
+            Id = SampleMessages.MessageId,
+            Ts = SampleMessages.Ts,
+            Payload = null!,
+        };
+
+        Assert.ThrowsAny<JsonException>(() => ContractJson.Serialize(hello));
+    }
 }

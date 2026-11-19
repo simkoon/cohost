@@ -28,6 +28,8 @@ public sealed class ContractCoreTests
         Assert.Equal(JsonNumberHandling.Strict, o.NumberHandling);
         Assert.True(o.AllowOutOfOrderMetadataProperties);
         Assert.Equal(JsonIgnoreCondition.Never, o.DefaultIgnoreCondition);
+        Assert.True(o.RespectRequiredConstructorParameters);
+        Assert.True(o.RespectNullableAnnotations);
     }
 
     [Fact]
