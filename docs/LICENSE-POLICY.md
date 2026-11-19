@@ -1,6 +1,6 @@
 # 라이선스 정책
 
-CoHost 레포는 Apache License 2.0(`LICENSE`)으로 공개한다. 이 문서는 서드파티 의존성에 적용하는 기준(D22, D25)과 새 의존성을 추가할 때의 절차를 정한다. 기준은 `scripts/check-licenses.sh`가 CI(server 워크플로)에서 강제한다.
+CoHost 레포는 Apache License 2.0(`LICENSE`)으로 공개한다. 이 문서는 서드파티 의존성에 적용하는 기준(D22, D25)과 새 의존성을 추가할 때의 절차를 정한다. 기준은 `scripts/check-licenses.sh`가 CI(server 워크플로)에서 강제한다. npm은 license-checker-rseidelsohn의 JSON 출력(`--json`)을, NuGet은 nuspec의 `<license type="expression">` 값을 같은 SPDX 식 평가기(`expression_allowed`)로 판정한다. checker의 내장 허용 옵션은 부분 문자열 비교라서 쓰지 않는다.
 
 ## 배포물 허용 목록
 
@@ -11,9 +11,9 @@ CoHost 레포는 Apache License 2.0(`LICENSE`)으로 공개한다. 이 문서는
 - Apache-2.0
 - ISC
 - 0BSD
-- PostgreSQL (Npgsql이 이 라이선스다)
+- PostgreSQL (Npgsql이 이 라이선스다. 현재 NuGet 검사에만 적용하고 npm 배포물 검사 목록에는 없다. npm 쪽에 필요해지면 이 문서에 먼저 적는다)
 
-`A OR B` 식은 한쪽이라도 허용 목록에 있으면 통과하고, `A AND B` 식은 모든 구성 요소가 허용 목록에 있어야 통과한다. 라이선스 식이 없는 패키지는 통과하지 못한다.
+`A OR B` 식은 한쪽이라도 허용 목록에 있으면 통과하고, `A AND B` 식은 모든 구성 요소가 허용 목록에 있어야 통과한다(예: `MIT AND GPL-3.0`은 실패). 괄호나 `WITH`가 있는 식은 모든 토큰이 허용되어야 통과한다(SPDX보다 엄격하게 판정한다). 라이선스 식이 없는 패키지, `UNKNOWN`, checker가 LICENSE 파일에서 추정해 이름 끝에 `*`가 붙은 값(예: `MIT*`), `SEE LICENSE IN …`, `Custom: …`은 통과하지 못한다. package.json의 licenses 배열은 모든 원소를 AND로 묶어 판정한다.
 
 ## 빌드 전용 도구 확장 허용
 
@@ -31,7 +31,18 @@ CoHost 레포는 Apache License 2.0(`LICENSE`)으로 공개한다. 이 문서는
 
 ## 쓰지 않는 라이선스
 
-GPL, LGPL, AGPL, SSPL 계열은 배포물에도 빌드 도구에도 쓰지 않는다. 두 검사 목록 어디에도 없으므로 CI가 실패한다.
+GPL, LGPL, AGPL, SSPL 계열은 배포물에도 빌드 도구에도 쓰지 않는다. 두 검사 목록 어디에도 없으므로 CI가 실패한다. `MIT AND GPL-3.0`처럼 GPL 계열이 AND로 묶인 복합식도 실패한다.
+
+## 검사 방식과 자가 검사
+
+검사 순서는 다음과 같다.
+
+1. 자가 검사
+2. npm production 의존성을 배포물 목록으로 판정
+3. npm 전체 트리를 빌드 전용 확장 목록으로 판정
+4. 서버 `dotnet publish` 결과의 NuGet 런타임 의존성을 배포물 목록 + PostgreSQL로 판정
+
+자가 검사는 임시 디렉터리에 가짜 패키지 `fake-gpl@1.0.0`(license `MIT AND GPL-3.0`)을 만들어 실제 checker로 스캔하고, 두 npm 목록에서 모두 거부되는지 확인한다. 고정된 식 표(`MIT AND GPL-3.0`, `(GPL-2.0 AND MIT)`, `MIT*`, `UNKNOWN` 등)의 판정도 함께 확인한다. 자가 검사가 실패하면 스크립트는 실제 검사 전에 실패한다. 자가 검사는 매 실행(CI 포함) 돈다. 검사 도구는 lockfile로 설치된 checker만 `npx --no-install`로 쓴다(D26).
 
 ## 코덱
 
@@ -41,4 +52,4 @@ GPL, LGPL, AGPL, SSPL 계열은 배포물에도 빌드 도구에도 쓰지 않�
 
 1. 버전을 정확히 고정한다. .NET은 `Directory.Packages.props`에서 10.0.x 범위의 정확한 버전, npm은 배포된 지 14일이 지난 버전을 `package.json`에 정확히 적고 lockfile을 갱신한다. 설치는 항상 `npm ci`다(D26).
 2. 라이선스를 확인한다. nuspec의 `license` 식이나 npm 패키지의 `license` 필드를 본다.
-3. `scripts/check-licenses.sh`를 통과시킨다. 통과하지 못하면 대체 패키지를 찾거나, 위 확장 목록에 넣을 근거가 있는지 이 문서에서 먼저 논의한다.
+3. `scripts/check-licenses.sh`를 통과시킨다. 통과하지 못하면 대체 패키지를 찾거나, 위 확장 목록에 넣을 근거가 있는지 이 문서에서 먼저 논의한다. 허용 목록을 넓히는 변경은 스크립트와 이 문서를 같은 커밋에서 바꾼다.
