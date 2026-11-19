@@ -4,7 +4,9 @@
     "projects": [
       "protocol/CoHost.Contracts/CoHost.Contracts.csproj",
       "protocol/CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj",
-      "protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj"
+      "protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj",
+      "server/CoHost.Server/CoHost.Server.csproj",
+      "server/CoHost.Server.Tests/CoHost.Server.Tests.csproj"
     ]
   }
 }

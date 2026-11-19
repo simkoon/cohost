@@ -12,4 +12,8 @@
     <Project Path="protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj" />
     <Project Path="protocol/CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj" />
   </Folder>
+  <Folder Name="/server/">
+    <Project Path="server/CoHost.Server.Tests/CoHost.Server.Tests.csproj" />
+    <Project Path="server/CoHost.Server/CoHost.Server.csproj" />
+  </Folder>
 </Solution>
