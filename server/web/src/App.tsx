@@ -7,14 +7,14 @@ type LoadState =
   | { kind: 'failed' }
   | { kind: 'ready'; info: ServerInfo }
 
-function databaseLabel(status: ServerInfo['database']): string {
+function databaseStatus(status: ServerInfo['database']): { label: string; modifier: string } {
   switch (status) {
     case 'ok':
-      return t.dbOk
+      return { label: t.dbOk, modifier: 'ok' }
     case 'migrations_pending':
-      return t.dbMigrating
+      return { label: t.dbMigrating, modifier: 'migrating' }
     case 'unavailable':
-      return t.dbDown
+      return { label: t.dbDown, modifier: 'down' }
     default: {
       // A new DatabaseStatus value in the contract makes this assignment a compile error.
       const unhandled: never = status
@@ -46,33 +46,56 @@ export default function App() {
   }, [])
 
   if (state.kind === 'loading') {
-    return <p>{t.loading}</p>
+    return (
+      <main className="page">
+        <p role="status">{t.loading}</p>
+      </main>
+    )
   }
   if (state.kind === 'failed') {
-    return <p role="alert">{t.loadFailed}</p>
+    return (
+      <main className="page">
+        <h1 className="app-name">{t.appName}</h1>
+        <div role="alert" className="banner banner--error">
+          {t.loadFailed}
+        </div>
+      </main>
+    )
   }
 
   const { info } = state
+  const db = databaseStatus(info.database)
   return (
-    <main>
-      <h1>{info.appName || t.appName}</h1>
-      <dl>
+    <main className="page">
+      <h1 className="app-name">{info.appName || t.appName}</h1>
+      {info.defaultDbPassword && (
+        <div role="alert" className="banner banner--warning">
+          {t.defaultDbPasswordWarning}
+        </div>
+      )}
+      <dl className="panel info">
         <dt>{t.serverVersion}</dt>
         <dd>{info.serverVersion}</dd>
         <dt>{t.protocolVersion}</dt>
         <dd>{info.protocolVersion}</dd>
         <dt>{t.certFingerprint}</dt>
         <dd>
-          <code>{info.certSha256}</code>
-          <p>{t.fingerprintHint}</p>
+          <code className="fingerprint">{info.certSha256}</code>
+          <p className="hint">{t.fingerprintHint}</p>
         </dd>
         <dt>{t.database}</dt>
-        <dd>{databaseLabel(info.database)}</dd>
+        <dd>
+          <span className={`status status--${db.modifier}`}>{db.label}</span>
+          {info.database === 'unavailable' && (
+            <p className="hint">
+              {t.dbDownHint} <code>{t.dbDownCommand}</code>
+            </p>
+          )}
+        </dd>
       </dl>
-      {info.defaultDbPassword && <div role="alert">{t.defaultDbPasswordWarning}</div>}
-      <section>
-        <h2>{t.dashboardTitle}</h2>
-        <p>{t.dashboardEmpty}</p>
+      <section className="dashboard">
+        <h2 className="section-title">{t.dashboardTitle}</h2>
+        <p className="panel placeholder">{t.dashboardEmpty}</p>
       </section>
     </main>
   )
