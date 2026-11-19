@@ -1,0 +1,34 @@
+{
+  "name": "cohost-admin",
+  "private": true,
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "gen:schema": "dotnet run --project ../../protocol/CoHost.Contracts.SchemaGen -- generated/schema",
+    "gen:types": "json2ts -i generated/schema -o src/generated --additionalProperties=false --no-style.semi",
+    "gen": "npm run gen:schema && npm run gen:types",
+    "dev": "vite",
+    "build": "npm run gen:types && tsc -b && vite build",
+    "lint": "oxlint --deny-warnings src",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "json-schema-to-typescript": "16.0.0",
+    "license-checker-rseidelsohn": "4.4.2",
+    "oxlint": "1.91.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  }
+}
