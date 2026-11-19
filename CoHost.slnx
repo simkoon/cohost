@@ -8,6 +8,7 @@
     <Project Path="client/CoHost.Client/CoHost.Client.csproj" />
   </Folder>
   <Folder Name="/protocol/">
+    <Project Path="protocol/CoHost.Contracts.SchemaGen/CoHost.Contracts.SchemaGen.csproj" />
     <Project Path="protocol/CoHost.Contracts/CoHost.Contracts.csproj" />
     <Project Path="protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj" />
     <Project Path="protocol/CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj" />
