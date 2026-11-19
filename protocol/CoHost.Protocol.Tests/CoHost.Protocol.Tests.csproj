@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CoHost.Contracts/CoHost.Contracts.csproj" />
+    <ProjectReference Include="../CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../compat/**/*.json" Link="compat/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

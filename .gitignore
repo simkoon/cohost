@@ -1,0 +1,39 @@
+.planning/
+.omc/
+**/.omc/
+bin/
+obj/
+node_modules/
+.vs/
+.idea/
+*.user
+.DS_Store
+.env
+
+# test output / build info
+TestResults/
+*.tsbuildinfo
+
+# keys and certificates (never commit)
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+
+# environment files
+.env.*
+!.env.example
+
+# local data
+.data/
+/data/
+
+# generated artifacts
+server/web/generated/
+server/web/src/generated/
+server/web/dist/
+
+# local hygiene denylist (read by scripts/check-hygiene.sh)
+.hygiene-denylist

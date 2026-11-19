@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "CoHost.slnx",
+    "projects": [
+      "protocol/CoHost.Contracts/CoHost.Contracts.csproj",
+      "protocol/CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj",
+      "protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj"
+    ]
+  }
+}
