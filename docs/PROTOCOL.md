@@ -15,6 +15,7 @@ CoHost의 서버, 에이전트, 클라이언트가 주고받는 메시지의 정
 - `protocolVersion`은 문자열 `"MAJOR.MINOR"`이다. 현재 값은 `0.1`이고, 코드에는 정수 상수 두 개(`ProtocolInfo.Major`, `ProtocolInfo.Minor`)와 문자열 상수 `ProtocolInfo.Version`이 있다.
 - MINOR는 메시지나 필드를 추가할 때만 올린다. 삭제하거나 의미를 바꾸면 MAJOR를 올린다.
 - MINOR에서 추가한 필드는 수신 측에서 선택 사항으로 다룬다(없으면 기본값).
+- C# 계약에서는 MINOR에서 추가하는 필드를 기본값이 있는 생성자 매개변수(예: `string? Note = null`)로 둔다. 기본값이 없는 매개변수는 필수 필드가 되어, 그 필드를 모르는 구버전 송신자의 메시지가 해석 실패가 된다. v0.1의 필드는 모두 필수다.
 - 기존 enum에 값을 추가하면 구버전 수신자가 그 메시지를 해석하지 못한다. 그래서 enum 값 추가는 MAJOR 변경으로 취급한다. 새 값이 필요하면 새 필드를 추가한다.
 - 배포 순서는 server, agent, client이다. 서버는 직전 MAJOR까지 받는다.
 - 서버는 최소 버전(`minProtocolVersion`)을 `hello.ack`로 알린다. 최소 버전 미만이면 4절의 `4426` 절차를 따른다.
@@ -40,14 +41,16 @@ CoHost의 서버, 에이전트, 클라이언트가 주고받는 메시지의 정
 - `ts`: UTC 시각, RFC 3339. 송신은 `Z` 또는 `+00:00` 오프셋 표기 모두 가능하고, 수신은 `Z`와 오프셋을 둘 다 허용한다.
 - 필드 이름은 camelCase다.
 - enum은 snake_case 소문자 문자열이다(6절). 정수 값은 거절한다.
-- null은 생략하지 않고 `null`로 명시해서 쓴다.
+- null은 생략하지 않고 `null`로 명시해서 쓴다. 수신 측도 이를 강제한다. payload의 모든 필드는 키가 항상 있어야 하고, null 가능 필드도 키를 생략하면 해석 실패다.
 
 ### 3.2 모르는 입력
 
 - 모르는 `type`은 무시한다. 로그에는 type 이름만 남긴다.
 - 모르는 필드는 무시한다.
-- 해석에 실패한 메시지(깨진 JSON, 모르는 enum 값)도 type 이름만 로그로 남기고 버린다. 연결은 유지한다.
-- `payload`는 `agentSecret`, `accessToken` 같은 비밀을 담을 수 있으므로 어떤 경우에도 로그에 쓰지 않는다. 예외 메시지에도 넣지 않는다.
+- 해석 실패는 깨진 JSON, 모르는 enum 값이나 정수 enum 값, 필수 필드 누락(키가 없음), null 불가 필드의 `null`, `payload` 자체의 누락이나 `null`이다. `ContractJson.Parse`는 이때 `JsonException`을 던지고, 수신 측은 type 이름만 로그로 남기고 메시지를 버린다. 연결은 유지한다. 누락된 값을 기본값(예: `installKind`의 `msi`, UUID의 0)으로 채워 처리하지 않는다. 이 검사는 `ContractJson.Options`의 `RespectRequiredConstructorParameters`와 `RespectNullableAnnotations`가 한다.
+  - 배열 원소의 `null`(예: `remotePeers: [null]`)은 파서가 거르지 않는다. 배열 원소는 null이면 안 되며, 수신 핸들러가 검사해서 버린다.
+  - 모르는 `type`과 모르는 필드는 해석 실패가 아니다(위 두 항목).
+- `payload`는 `agentSecret`, `accessToken` 같은 비밀을 담을 수 있으므로 어떤 경우에도 로그에 쓰지 않는다. 예외 메시지에도 넣지 않는다. `JsonException` 메시지에는 필드 이름과 JSON 경로만 들어가고 값은 들어가지 않는다.
 
 ### 3.3 크기 상한
 
@@ -75,7 +78,7 @@ CoHost의 서버, 에이전트, 클라이언트가 주고받는 메시지의 정
 
 ## 5. 서버 WebSocket 메시지
 
-방향 표기: A는 에이전트, S는 서버, C는 클라이언트, Admin은 어드민 화면이다. 필드 표의 "null"은 `null`이 올 수 있는지를 뜻한다.
+방향 표기: A는 에이전트, S는 서버, C는 클라이언트, Admin은 어드민 화면이다. 필드 표의 "null"은 `null`이 올 수 있는지를 뜻한다. 모든 필드는 키가 항상 있어야 한다. "불가" 필드에 `null`이 오거나 키가 빠지면 해석 실패다(3.2).
 
 ### 5.1 /ws/agent
 
@@ -388,6 +391,7 @@ CoHost를 거치지 않은 접속(`rdp`, `radmin`)을 감지했다(D5). payload�
 규칙 (a). 에이전트와 클라이언트는 모두 `hello.payload.installKind`(`msi`, `zip`, `dev`)로 설치 방식을 보고한다.
 
 - SPEC 5.1에는 클라이언트 `hello`에만 이 필드가 있었다. 에이전트 `hello`에 `installKind`를 추가한 것이 이 문서가 정하는 확장이다. v0.1이 첫 버전이므로 두 채널 모두 필수 필드다.
+- `installKind`가 빠진 `hello`는 해석 실패로 버린다(3.2). 기본값 `msi`로 채우지 않는다. 그래서 필드를 빠뜨린 개발 빌드가 MSI 업데이트 대상이 되는 일이 없다.
 - 값의 출처는 설치 때 설정에 기록된 방식이다. MSI로 설치하면 `msi`, `install.ps1`로 설치하면 `zip`, 설정에 기록이 없으면 `dev`다. 이 기록은 AGT-04(Phase 2)에서 구현한다.
 - 서버는 이 값을 연결 메모리에 둔다. Phase 2(P1)에서 `devices.install_kind`와 클라이언트 세션 정보에 저장한다.
 - 연결 중에는 바뀌지 않는다. 업데이트는 프로세스를 다시 시작하므로 재연결할 때 다시 보고한다.
