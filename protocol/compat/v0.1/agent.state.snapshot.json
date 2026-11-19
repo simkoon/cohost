@@ -1,0 +1,26 @@
+{
+  "type": "state.snapshot",
+  "id": "11111111-1111-1111-1111-111111111111",
+  "ts": "2026-11-19T05:00:00+00:00",
+  "payload": {
+    "appVersion": "0.1.0",
+    "consoleUser": "operator01",
+    "local": {
+      "operatorId": "33333333-3333-3333-3333-333333333333",
+      "operatorName": "김철수",
+      "task": "레시피 수정",
+      "startedAt": "2026-11-19T05:00:00Z",
+      "expectedEnd": "2026-11-19T06:00:00Z",
+      "authLevel": "pin"
+    },
+    "remoteSessions": [
+      {
+        "sid": "55555555-5555-5555-5555-555555555555",
+        "userId": "44444444-4444-4444-4444-444444444444",
+        "userName": "홍길동",
+        "clientIp": "192.0.2.10",
+        "startedAt": "2026-11-19T05:00:00Z"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "hello",
+  "id": "11111111-1111-1111-1111-111111111111",
+  "ts": "2026-11-19T05:00:00Z",
+  "payload": {
+    "accessToken": "example.access.token",
+    "protocolVersion": "0.1",
+    "appVersion": "0.1.0",
+    "installKind": "zip"
+  }
+}

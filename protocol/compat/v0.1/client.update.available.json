@@ -1,0 +1,13 @@
+{
+  "type": "update.available",
+  "id": "11111111-1111-1111-1111-111111111111",
+  "ts": "2026-11-19T05:00:00+00:00",
+  "payload": {
+    "component": "client",
+    "kind": "msi",
+    "version": "0.1.1",
+    "url": "https://cohost.local:8443/packages/agent-0.1.1.msi",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signature": "example-signature"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "heartbeat",
+  "id": "11111111-1111-1111-1111-111111111111",
+  "ts": "2026-11-19T05:00:00Z",
+  "payload": {
+    "cpuPercent": 12.5,
+    "memoryPercent": 40.25,
+    "consoleUser": null,
+    "idleSeconds": 30
+  }
+}
