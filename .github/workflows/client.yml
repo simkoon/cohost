@@ -1,0 +1,64 @@
+name: client
+
+on:
+  pull_request:
+    paths:
+      - 'client/**'
+      - 'client.slnf'
+      - 'protocol/**'
+      - 'docs/PROTOCOL.md'
+      - 'CoHost.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'dotnet-tools.json'
+      - '.editorconfig'
+      - '.github/workflows/client.yml'
+  push:
+    branches: [main]
+    tags: ['client-v*']
+    paths:
+      - 'client/**'
+      - 'client.slnf'
+      - 'protocol/**'
+      - 'docs/PROTOCOL.md'
+      - 'CoHost.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'dotnet-tools.json'
+      - '.editorconfig'
+      - '.github/workflows/client.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+
+      - name: Build
+        run: dotnet build client.slnf -c Release
+
+      - name: Test (includes protocol tests)
+        run: dotnet test --solution client.slnf -c Release --no-build
+
+      - name: Check repo hygiene
+        shell: bash
+        run: bash scripts/check-hygiene.sh

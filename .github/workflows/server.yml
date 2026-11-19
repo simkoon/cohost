@@ -1,0 +1,123 @@
+name: server
+
+on:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'server.slnf'
+      - 'protocol/**'
+      - 'docs/PROTOCOL.md'
+      - 'CoHost.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'dotnet-tools.json'
+      - '.editorconfig'
+      - '.github/workflows/server.yml'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - '.env.example'
+      - 'scripts/**'
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+      - '.gitattributes'
+  push:
+    branches: [main]
+    tags: ['server-v*']
+    paths:
+      - 'server/**'
+      - 'server.slnf'
+      - 'protocol/**'
+      - 'docs/PROTOCOL.md'
+      - 'CoHost.slnx'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'global.json'
+      - 'dotnet-tools.json'
+      - '.editorconfig'
+      - '.github/workflows/server.yml'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - '.env.example'
+      - 'scripts/**'
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+      - '.gitattributes'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Packages.props', 'global.json') }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/web/package-lock.json
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
+      - name: Build
+        run: dotnet build server.slnf -c Release
+
+      - name: Test (includes protocol tests)
+        run: dotnet test --solution server.slnf -c Release --no-build
+
+      - name: Check for pending EF model changes
+        run: dotnet ef migrations has-pending-model-changes --project server/CoHost.Server/CoHost.Server.csproj
+
+      - name: Install web dependencies
+        working-directory: server/web
+        run: npm ci
+
+      - name: Generate contract schema and types
+        working-directory: server/web
+        run: npm run gen
+
+      - name: Lint web
+        working-directory: server/web
+        run: npm run lint
+
+      - name: Build web
+        working-directory: server/web
+        run: npm run build
+
+      - name: Check contract types
+        run: bash scripts/check-contract-types.sh
+
+      - name: Check repo hygiene
+        run: bash scripts/check-hygiene.sh
+
+      - name: Check licenses
+        run: bash scripts/check-licenses.sh
+
+      - name: Check workflows
+        run: bash scripts/check-workflows.sh
+
+      - name: Compose smoke test
+        run: bash scripts/smoke-compose.sh
