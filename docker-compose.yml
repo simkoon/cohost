@@ -1,0 +1,42 @@
+name: cohost
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cohost
+      POSTGRES_PASSWORD: "${COHOST_DB_PASSWORD:-cohost-change-me}"
+      POSTGRES_DB: cohost
+    # postgres 18+ keeps its data in a versioned subdirectory of /var/lib/postgresql.
+    volumes:
+      - cohost-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cohost -d cohost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No "ports": the database is reachable only from the compose network (D26).
+
+  cohost-server:
+    # Fixed tag so the image can be moved with docker save / docker load.
+    image: cohost-server:${COHOST_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${COHOST_PORT:-8443}:${COHOST_PORT:-8443}"
+    environment:
+      COHOST_PORT: "${COHOST_PORT:-8443}"
+      COHOST_HOSTNAMES: "${COHOST_HOSTNAMES:-}"
+      COHOST_DB: "Host=postgres;Database=cohost;Username=cohost;Password=${COHOST_DB_PASSWORD:-cohost-change-me}"
+    volumes:
+      - cohost-data:/data
+
+volumes:
+  cohost-pgdata: {}
+  cohost-data: {}

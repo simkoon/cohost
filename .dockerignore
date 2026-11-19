@@ -1,0 +1,23 @@
+# Build context hygiene: no secrets, no local build output, no unrelated components.
+**/bin/
+**/obj/
+**/node_modules/
+**/TestResults/
+server/web/dist/
+server/web/generated/
+server/web/src/generated/
+.git/
+.github/
+.planning/
+.omc/
+agent/
+client/
+docs/
+scripts/
+.data/
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
