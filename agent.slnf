@@ -1,0 +1,13 @@
+{
+  "solution": {
+    "path": "CoHost.slnx",
+    "projects": [
+      "protocol/CoHost.Contracts/CoHost.Contracts.csproj",
+      "protocol/CoHost.Remote.Protocol/CoHost.Remote.Protocol.csproj",
+      "protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj",
+      "agent/CoHost.Agent.Service/CoHost.Agent.Service.csproj",
+      "agent/CoHost.Agent.Capture/CoHost.Agent.Capture.csproj",
+      "agent/CoHost.Agent.Tray/CoHost.Agent.Tray.csproj"
+    ]
+  }
+}

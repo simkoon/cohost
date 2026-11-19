@@ -1,4 +1,12 @@
 <Solution>
+  <Folder Name="/agent/">
+    <Project Path="agent/CoHost.Agent.Capture/CoHost.Agent.Capture.csproj" />
+    <Project Path="agent/CoHost.Agent.Service/CoHost.Agent.Service.csproj" />
+    <Project Path="agent/CoHost.Agent.Tray/CoHost.Agent.Tray.csproj" />
+  </Folder>
+  <Folder Name="/client/">
+    <Project Path="client/CoHost.Client/CoHost.Client.csproj" />
+  </Folder>
   <Folder Name="/protocol/">
     <Project Path="protocol/CoHost.Contracts/CoHost.Contracts.csproj" />
     <Project Path="protocol/CoHost.Protocol.Tests/CoHost.Protocol.Tests.csproj" />
