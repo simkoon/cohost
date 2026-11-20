@@ -190,11 +190,13 @@ public sealed class EnvelopeTests
              "payload":{"deviceId":"{{{IdText}}}","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0"}}
             """);
 
-        var ex = Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<AgentMessage>(json));
+        var ex = Assert.Throws<ContractParseException>(() => ContractJson.Parse<AgentMessage>(json));
 
-        Assert.DoesNotContain("example-agent-secret", ex.Message);
-        Assert.DoesNotContain("example-agent-secret", ex.InnerException?.Message ?? string.Empty);
-        Assert.Contains("installKind", ex.Message);
+        // The sanitized exception carries the type and the JSON path, not the field name or any value.
+        Assert.DoesNotContain("example-agent-secret", ex.ToString());
+        Assert.Null(ex.InnerException);
+        Assert.Equal("hello", ex.MessageType);
+        Assert.Equal("$.payload", ex.Path);
     }
 
     [Fact]
