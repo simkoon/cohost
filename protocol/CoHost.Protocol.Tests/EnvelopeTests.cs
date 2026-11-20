@@ -160,26 +160,83 @@ public sealed class EnvelopeTests
 
     public static TheoryData<string, string> InvalidAgentHelloPayloads() => new()
     {
-        { "empty payload object", "{}" },
-        { "null payload", "null" },
+        { "{}", "$.payload" },
+        { "null", "$.payload" },
         {
-            "installKind missing",
-            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0"}"""
+            // installKind missing
+            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0"}""",
+            "$.payload"
         },
         {
-            "agentSecret null",
-            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":null,"protocolVersion":"0.1","appVersion":"0.1.0","installKind":"dev"}"""
+            // agentSecret null
+            """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":null,"protocolVersion":"0.1","appVersion":"0.1.0","installKind":"dev"}""",
+            "$.payload.agentSecret"
         },
     };
 
     [Theory]
     [MemberData(nameof(InvalidAgentHelloPayloads))]
-    public void Invalid_agent_hello_is_a_parse_failure(string caseName, string payload)
+    public void Invalid_agent_hello_is_a_parse_failure(string payload, string expectedPath)
     {
         var json = Utf8($$$"""{"type":"hello","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z","payload":{{{payload}}}}""");
 
-        Assert.ThrowsAny<JsonException>(() => ContractJson.Parse<AgentMessage>(json));
-        Assert.False(string.IsNullOrEmpty(caseName));
+        var ex = Assert.Throws<ContractParseException>(() => ContractJson.Parse<AgentMessage>(json));
+
+        Assert.Equal(expectedPath, ex.Path);
+        Assert.Equal("hello", ex.MessageType);
+    }
+
+    private const string ValidHelloPayload =
+        """{"deviceId":"11111111-1111-1111-1111-111111111111","agentSecret":"example-agent-secret","protocolVersion":"0.1","appVersion":"0.1.0","installKind":"dev"}""";
+
+    public static TheoryData<string, string, string> InvalidEnvelopes() => new()
+    {
+        // id missing
+        {
+            $$$"""{"type":"hello","ts":"2026-11-19T05:00:00Z","payload":{{{ValidHelloPayload}}}}""",
+            "hello", "$"
+        },
+        // id missing on an unknown type: still an envelope error, not an ignored unknown type
+        {
+            """{"type":"future.message","ts":"2026-11-19T05:00:00Z","payload":{"x":1}}""",
+            "future.message", "$"
+        },
+        // id null
+        {
+            $$$"""{"type":"hello","id":null,"ts":"2026-11-19T05:00:00Z","payload":{{{ValidHelloPayload}}}}""",
+            "hello", "$.id"
+        },
+        // ts missing
+        {
+            $$$"""{"type":"hello","id":"{{{IdText}}}","payload":{{{ValidHelloPayload}}}}""",
+            "hello", "$"
+        },
+        // ts malformed
+        {
+            $$$"""{"type":"hello","id":"{{{IdText}}}","ts":"yesterday","payload":{{{ValidHelloPayload}}}}""",
+            "hello", "$.ts"
+        },
+        // payload key missing
+        {
+            $$$"""{"type":"hello","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z"}""",
+            "hello", "$"
+        },
+        // collection field null
+        {
+            $$$"""{"type":"state.snapshot","id":"{{{IdText}}}","ts":"2026-11-19T05:00:00Z","payload":{"appVersion":"0.1.0","consoleUser":null,"local":null,"remoteSessions":null}}""",
+            "state.snapshot", "$.payload.remoteSessions"
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidEnvelopes))]
+    public void Invalid_envelope_is_a_parse_failure(string json, string expectedType, string expectedPath)
+    {
+        var ex = Assert.Throws<ContractParseException>(() => ContractJson.Parse<AgentMessage>(Utf8(json)));
+
+        Assert.Equal(expectedType, ex.MessageType);
+        Assert.Equal(expectedPath, ex.Path);
+        Assert.DoesNotContain("example-agent-secret", ex.ToString());
     }
 
     [Fact]

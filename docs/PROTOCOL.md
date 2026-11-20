@@ -41,16 +41,17 @@ CoHost의 서버, 에이전트, 클라이언트가 주고받는 메시지의 정
 - `ts`: UTC 시각, RFC 3339. 송신은 `Z` 또는 `+00:00` 오프셋 표기 모두 가능하고, 수신은 `Z`와 오프셋을 둘 다 허용한다.
 - 필드 이름은 camelCase다.
 - enum은 snake_case 소문자 문자열이다(6절). 정수 값은 거절한다.
-- null은 생략하지 않고 `null`로 명시해서 쓴다. 수신 측도 이를 강제한다. payload의 모든 필드는 키가 항상 있어야 하고, null 가능 필드도 키를 생략하면 해석 실패다.
+- null은 생략하지 않고 `null`로 명시해서 쓴다. 수신 측도 이를 강제한다. v0.1에서 정의된 payload 필드는 키가 항상 있어야 하고, null 가능 필드도 키를 생략하면 해석 실패다. MINOR에서 추가된 필드는 2절에 따라 생략할 수 있다.
 
 ### 3.2 모르는 입력
 
-- 모르는 `type`은 무시한다. 로그에는 type 이름만 남긴다.
+- 모르는 `type`은 무시한다. 로그에는 type 이름만 남긴다. `ContractJson.Parse`가 돌려주는 type 이름은 로그에 그대로 써도 되는 값이다. 소문자로 시작하는 ASCII 영숫자 구간을 점으로 이은 64자 이하 문자열(예: `local.forceEnd`)이면 그대로 돌려주고, 아니면 `<invalid>`를, `type`이 없으면 `<missing>`을 돌려준다.
 - 모르는 필드는 무시한다.
-- 해석 실패는 깨진 JSON, 모르는 enum 값이나 정수 enum 값, 필수 필드 누락(키가 없음), null 불가 필드의 `null`, `payload` 자체의 누락이나 `null`이다. `ContractJson.Parse`는 이때 `JsonException`을 던지고, 수신 측은 type 이름만 로그로 남기고 메시지를 버린다. 연결은 유지한다. 누락된 값을 기본값(예: `installKind`의 `msi`, UUID의 0)으로 채워 처리하지 않는다. 이 검사는 `ContractJson.Options`의 `RespectRequiredConstructorParameters`와 `RespectNullableAnnotations`가 한다.
+- 해석 실패는 깨진 JSON, 봉투 필드(`id`, `ts`, `payload`)의 누락이나 형식 오류, 모르는 enum 값이나 정수 enum 값, 필수 필드 누락(키가 없음), null 불가 필드의 `null`(컬렉션 필드 포함, 예: `remoteSessions: null`), `payload` 자체의 `null`이다. `ContractJson.Parse`는 이때 `ContractParseException`(`JsonException` 파생)을 던진다. 수신 측은 예외의 `MessageType`(type 이름)과 `Path`(JSON 경로)만 로그로 남기고 메시지를 버린다. 연결은 유지한다. 누락된 값을 기본값(예: `installKind`의 `msi`, UUID의 0)으로 채워 처리하지 않는다. 이 검사는 `ContractJson.Options`의 `RespectRequiredConstructorParameters`와 `RespectNullableAnnotations`가 한다.
   - 배열 원소의 `null`(예: `remotePeers: [null]`)은 파서가 거르지 않는다. 배열 원소는 null이면 안 되며, 수신 핸들러가 검사해서 버린다.
+  - 모르는 `type`이어도 봉투의 `id`와 `ts`는 있어야 하고 형식이 맞아야 한다. 봉투가 잘못되면 모르는 type으로 무시하지 않고 해석 실패로 처리한다. `payload`는 알려진 `type`에서만 필수다.
   - 모르는 `type`과 모르는 필드는 해석 실패가 아니다(위 두 항목).
-- `payload`는 `agentSecret`, `accessToken` 같은 비밀을 담을 수 있으므로 어떤 경우에도 로그에 쓰지 않는다. 예외 메시지에도 넣지 않는다. `JsonException` 메시지에는 필드 이름과 JSON 경로만 들어가고 값은 들어가지 않는다.
+- `payload`는 `agentSecret`, `accessToken` 같은 비밀을 담을 수 있으므로 어떤 경우에도 로그에 쓰지 않는다. 예외 메시지에도 넣지 않는다. `ContractParseException`에는 type 이름(`MessageType`), JSON 경로(`Path`), 위치(`LineNumber`, `BytePositionInLine`)만 들어가고 내부 예외는 없다. 예외 메시지도 `Invalid '<type>' message at <path> (line <n>, byte <n>).` 형식으로 이 값들만 담는다. System.Text.Json이 원래 던지는 예외의 메시지는 깨진 리터럴(예: `fals`, `nul`)부터 버퍼 끝까지의 원문을 담는다. 그래서 뒤에 오는 `agentSecret`이나 `accessToken`까지 드러날 수 있고, `ContractJson.Parse`는 그 예외를 버리고 다시 던진다. `MessageType`은 위 type 이름 규칙을 따르고, type을 읽지 못하면 `<unknown>`이다. `Path`는 `$`로 시작하고 ASCII 식별자 속성 이름(`.name`)과 숫자 첨자(`[0]`)로만 된 256자 이하 경로일 때만 그대로 두고, 아니면 `$`로 바꾼다. 수신 측은 `JsonSerializer`로 메시지를 직접 해석하지 않고 `ContractJson.Parse`를 쓴다.
 
 ### 3.3 크기 상한
 
@@ -78,7 +79,7 @@ CoHost의 서버, 에이전트, 클라이언트가 주고받는 메시지의 정
 
 ## 5. 서버 WebSocket 메시지
 
-방향 표기: A는 에이전트, S는 서버, C는 클라이언트, Admin은 어드민 화면이다. 필드 표의 "null"은 `null`이 올 수 있는지를 뜻한다. 모든 필드는 키가 항상 있어야 한다. "불가" 필드에 `null`이 오거나 키가 빠지면 해석 실패다(3.2).
+방향 표기: A는 에이전트, S는 서버, C는 클라이언트, Admin은 어드민 화면이다. 필드 표의 "null"은 `null`이 올 수 있는지를 뜻한다. 이 절의 표에 있는 필드(v0.1)는 모두 키가 항상 있어야 한다. "불가" 필드에 `null`이 오거나 키가 빠지면 해석 실패다(3.2).
 
 ### 5.1 /ws/agent
 
